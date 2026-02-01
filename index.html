@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧投資理財規劃工具 - 專家級建議</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        }
+        .card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        input[type="range"] {
+            accent-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">專業投資理財規劃系統</h1>
+            <p class="text-slate-600">輸入您的理財目標，獲得量身打造的資產配置建議</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left: Inputs -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center">
+                        <span class="mr-2">📋</span> 投資需求設定
+                    </h2>
+                    
+                    <!-- 投資期間 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">投資期間 (年)</label>
+                        <input type="number" id="years" value="10" min="1" max="50" 
+                            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                        <p class="text-xs text-slate-400 mt-1">建議長期投資以發揮複利效應</p>
+                    </div>
+
+                    <!-- 每月投入金額 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">第一年每月投入金額 (TWD)</label>
+                        <div class="flex items-center space-x-4">
+                            <input type="range" id="monthlyAmountRange" min="3000" max="100000" step="1000" value="10000" class="flex-1">
+                            <span id="monthlyAmountText" class="text-blue-600 font-bold w-20 text-right">10,000</span>
+                        </div>
+                        <input type="number" id="monthlyAmountInput" value="10000" class="hidden">
+                    </div>
+
+                    <!-- 風險承受度 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">風險承受度</label>
+                        <select id="riskLevel" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="conservative">保守型 (追求穩健、低波動)</option>
+                            <option value="moderate" selected>穩健型 (平衡成長與風險)</option>
+                            <option value="aggressive">積極型 (追求高報酬、忍受高波動)</option>
+                        </select>
+                    </div>
+
+                    <button id="calculateBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200">
+                        產生投資規劃報告
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Results -->
+            <div id="resultsArea" class="lg:col-span-2 space-y-6 hidden">
+                <!-- Summary Tiles -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="card p-4 text-center border-t-4 border-blue-500">
+                        <p class="text-xs text-slate-500">預期總資產</p>
+                        <p id="resTotalWealth" class="text-lg font-bold text-slate-800">-</p>
+                    </div>
+                    <div class="card p-4 text-center border-t-4 border-green-500">
+                        <p class="text-xs text-slate-500">累計投入本金</p>
+                        <p id="resTotalPrincipal" class="text-lg font-bold text-slate-800">-</p>
+                    </div>
+                    <div class="card p-4 text-center border-t-4 border-orange-500">
+                        <p class="text-xs text-slate-500">總獲利金額</p>
+                        <p id="resTotalProfit" class="text-lg font-bold text-green-600">-</p>
+                    </div>
+                    <div class="card p-4 text-center border-t-4 border-purple-500">
+                        <p class="text-xs text-slate-500">每月預計領息</p>
+                        <p id="resMonthlyIncome" class="text-lg font-bold text-blue-600">-</p>
+                    </div>
+                </div>
+
+                <!-- Portfolio Breakdown -->
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold mb-4 text-slate-800">資產配置建議單</h3>
+                    <div class="flex flex-col md:flex-row gap-8 items-center">
+                        <div class="w-full md:w-1/2">
+                            <canvas id="portfolioChart"></canvas>
+                        </div>
+                        <div class="w-full md:w-1/2 space-y-4">
+                            <div id="allocationList" class="space-y-2">
+                                <!-- Dynamic List -->
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg">
+                                <h4 class="font-bold text-sm text-slate-700 mb-1">配置理由：</h4>
+                                <p id="reasoningText" class="text-sm text-slate-600 leading-relaxed"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Growth Table -->
+                <div class="card p-6 overflow-hidden">
+                    <h3 class="text-xl font-bold mb-4 text-slate-800">年度資產成長明細 (每年投入金額成長 5%)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-600">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold">年度</th>
+                                    <th class="px-4 py-3 font-semibold">每月投入</th>
+                                    <th class="px-4 py-3 font-semibold">累積本金</th>
+                                    <th class="px-4 py-3 font-semibold">預估資產</th>
+                                    <th class="px-4 py-3 font-semibold">ROI (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="growthTableBody" class="divide-y divide-slate-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-12 text-center text-slate-400 text-xs">
+            *註：本試算結果僅供參考，不代表未來實際收益保證。投資必有風險，請謹慎評估。
+        </footer>
+    </div>
+
+    <script>
+        // 配置模型數據
+        const models = {
+            conservative: {
+                name: "穩健防禦型",
+                expectedRoi: 0.045,
+                reason: "專注於高股息與債券，以低波動資產降低市場下行衝擊，適合追求資產保值與領息的投資者。",
+                allocation: [
+                    { label: "全球債券型 ETF (如 BND/BNDX)", value: 50, color: "#64748b" },
+                    { label: "台股高股息 ETF (如 00878/00713)", value: 30, color: "#10b981" },
+                    { label: "市場價值型標的 (如 0056)", value: 20, color: "#3b82f6" }
+                ]
+            },
+            moderate: {
+                name: "平衡成長型",
+                expectedRoi: 0.075,
+                reason: "股債平衡配置。透過市值型 ETF 參與市場成長，搭配債券緩衝波動。適合大多數長期規劃者。",
+                allocation: [
+                    { label: "台股市場型 ETF (如 0050/006208)", value: 40, color: "#3b82f6" },
+                    { label: "高股息/低波動標的", value: 30, color: "#10b981" },
+                    { label: "美國長期公債 (如 00679B)", value: 30, color: "#64748b" }
+                ]
+            },
+            aggressive: {
+                name: "積極成長型",
+                expectedRoi: 0.11,
+                reason: "最大化股權比例。聚焦成長型科技股與大盤，雖短期波動大，但長期能享受資本利得的最大化。",
+                allocation: [
+                    { label: "台股大盤權值型 (0050)", value: 50, color: "#3b82f6" },
+                    { label: "半導體/科技產業 ETF (如 00830)", value: 30, color: "#f59e0b" },
+                    { label: "全球股票型 ETF (如 VT)", value: 20, color: "#8b5cf6" }
+                ]
+            }
+        };
+
+        let myChart = null;
+
+        // 連動 UI
+        const range = document.getElementById('monthlyAmountRange');
+        const text = document.getElementById('monthlyAmountText');
+        range.addEventListener('input', (e) => {
+            text.innerText = Number(e.target.value).toLocaleString();
+        });
+
+        // 核心計算邏輯
+        function calculate() {
+            const years = parseInt(document.getElementById('years').value) || 10;
+            const startMonthly = parseInt(range.value);
+            const risk = document.getElementById('riskLevel').value;
+            const model = models[risk];
+
+            const annualIncreaseRate = 0.05; // 每年增額 5%
+            const expectedRoi = model.expectedRoi;
+
+            let currentMonthly = startMonthly;
+            let cumulativePrincipal = 0;
+            let currentWealth = 0;
+            let history = [];
+
+            for (let y = 1; y <= years; y++) {
+                let yearlyInvestment = 0;
+                
+                // 每個月投入
+                for (let m = 1; m <= 12; m++) {
+                    yearlyInvestment += currentMonthly;
+                    // 計算月複利
+                    currentWealth = (currentWealth + currentMonthly) * (1 + (expectedRoi / 12));
+                }
+
+                cumulativePrincipal += yearlyInvestment;
+                
+                let roi = ((currentWealth - cumulativePrincipal) / cumulativePrincipal * 100).toFixed(1);
+
+                history.push({
+                    year: y,
+                    monthly: currentMonthly,
+                    principal: cumulativePrincipal,
+                    wealth: currentWealth,
+                    roi: roi
+                });
+
+                // 下一年增加 5% 投入
+                currentMonthly = currentMonthly * (1 + annualIncreaseRate);
+            }
+
+            displayResults(model, history);
+        }
+
+        function displayResults(model, history) {
+            const lastYear = history[history.length - 1];
+            
+            document.getElementById('resultsArea').classList.remove('hidden');
+            document.getElementById('resTotalWealth').innerText = `NT$ ${Math.round(lastYear.wealth).toLocaleString()}`;
+            document.getElementById('resTotalPrincipal').innerText = `NT$ ${Math.round(lastYear.principal).toLocaleString()}`;
+            document.getElementById('resTotalProfit').innerText = `NT$ ${Math.round(lastYear.wealth - lastYear.principal).toLocaleString()}`;
+            
+            // 預計月領息 (以最後資產的 4% 殖利率粗估)
+            const monthlyYield = (lastYear.wealth * 0.04) / 12;
+            document.getElementById('resMonthlyIncome').innerText = `NT$ ${Math.round(monthlyYield).toLocaleString()}`;
+
+            document.getElementById('reasoningText').innerText = model.reason;
+
+            // 更新列表
+            const listContainer = document.getElementById('allocationList');
+            listContainer.innerHTML = '';
+            model.allocation.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center text-sm";
+                div.innerHTML = `
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full mr-2" style="background:${item.color}"></span> ${item.label}</span>
+                    <span class="font-bold text-slate-700">${item.value}%</span>
+                `;
+                listContainer.appendChild(div);
+            });
+
+            // 更新表格
+            const tableBody = document.getElementById('growthTableBody');
+            tableBody.innerHTML = '';
+            history.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-slate-600 font-medium">${row.year}年</td>
+                    <td class="px-4 py-3">${Math.round(row.monthly).toLocaleString()}</td>
+                    <td class="px-4 py-3">${Math.round(row.principal).toLocaleString()}</td>
+                    <td class="px-4 py-3 text-blue-600 font-bold">${Math.round(row.wealth).toLocaleString()}</td>
+                    <td class="px-4 py-3 text-green-600">${row.roi}%</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            // 更新圖表
+            updateChart(model);
+            
+            // 捲動到結果區
+            document.getElementById('resultsArea').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function updateChart(model) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: model.allocation.map(a => a.label),
+                    datasets: [{
+                        data: model.allocation.map(a => a.value),
+                        backgroundColor: model.allocation.map(a => a.color),
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        document.getElementById('calculateBtn').addEventListener('click', calculate);
+
+        // 初始化
+        window.onload = () => {
+            console.log("理財規劃系統已就緒");
+        };
+    </script>
+</body>
+</html>
